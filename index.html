@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>세계 언어 지도</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>서울대 주변 맛집 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
@@ -13,146 +13,61 @@
       height: 100vh;
       width: 100%;
     }
-
-    .language-popup {
-      font-size: 14px;
-    }
-
-    .sidebar {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 300px;
-      max-height: 90vh;
-      overflow-y: auto;
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      display: none;
-    }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="sidebar" id="languageSidebar">
-    <h3 id="countryName">Country</h3>
-    <ol id="languageList"></ol>
-  </div>
 
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://unpkg.com/topojson@3"></script>
-
   <script>
-    const map = L.map("map").setView([20, 0], 2);
+    const map = L.map('map').setView([37.4675, 126.9523], 16); // 서울대 중심
 
-    // 배경 지도 타일
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 18,
-      attribution: "© OpenStreetMap",
     }).addTo(map);
 
-    // 샘플 언어 데이터 (현실과 다를 수 있음)
-    const languageData = {
-      "KOR": {
-        name: "South Korea",
-        top: "Korean",
-        list: [
-          ["Korean", 98],
-          ["English", 1],
-          ["Chinese", 0.5],
-          ["Japanese", 0.2],
-          ["Vietnamese", 0.1],
-        ],
+    const restaurants = [
+      {
+        name: "Sumibi (스미비 햄버그 스테이크)",
+        coords: [37.4706, 126.9518],
+        desc: "일본식 햄버그 라이스볼 전문",
+        link: "https://www.google.com/maps/place/Sumibi"
       },
-      "USA": {
-        name: "United States",
-        top: "English",
-        list: [
-          ["English", 80],
-          ["Spanish", 13],
-          ["Chinese", 1.1],
-          ["Tagalog", 0.5],
-          ["Vietnamese", 0.5],
-          ["French", 0.4],
-          ["Arabic", 0.3],
-        ],
+      {
+        name: "Kissa Seoul (기싸 서울)",
+        coords: [37.4701, 126.9512],
+        desc: "연어, 부타동 덮밥 전문",
+        link: "https://www.google.com/maps/place/Kissa+Seoul"
       },
-      "CHN": {
-        name: "China",
-        top: "Mandarin",
-        list: [
-          ["Mandarin", 70],
-          ["Cantonese", 10],
-          ["Shanghainese", 5],
-          ["Hokkien", 2],
-          ["English", 1],
-        ],
+      {
+        name: "Publico Taco",
+        coords: [37.4686, 126.9524],
+        desc: "정통 멕시칸 타코와 가라비타 프라이",
+        link: "https://www.google.com/maps/place/Publico+Taco"
       },
-      "ESP": {
-        name: "Spain",
-        top: "Spanish",
-        list: [
-          ["Spanish", 74],
-          ["Catalan", 17],
-          ["Galician", 7],
-          ["Basque", 2],
-        ],
+      {
+        name: "Don Ppyeorak (돈뻬염 탄불갈비)",
+        coords: [37.4689, 126.9532],
+        desc: "숯불 양념 갈비 전문",
+        link: "https://www.google.com/maps/place/돈뻬염+탄불갈비"
       },
-      // 추가 국가 가능
-    };
+      {
+        name: "Samsan Hoegwan (삼산회관)",
+        coords: [37.4672, 126.9535],
+        desc: "숙성 김치와 돼지고기 한식",
+        link: "https://www.google.com/maps/place/삼산회관"
+      },
+    ];
 
-    // 국가 경계 GeoJSON 불러오기
-    fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
-      .then(res => res.json())
-      .then(data => {
-        L.geoJson(data, {
-          onEachFeature: (feature, layer) => {
-            const iso_a3 = feature.id || feature.properties.ISO_A3;
-            const countryLang = languageData[iso_a3];
-
-            if (countryLang) {
-              layer.bindTooltip(`${countryLang.top}`, { permanent: true, direction: "center", className: "language-label" });
-              layer.on("click", () => {
-                map.fitBounds(layer.getBounds());
-                showLanguageList(countryLang);
-              });
-              layer.setStyle({
-                color: "#333",
-                weight: 1,
-                fillColor: "#f4f4f4",
-                fillOpacity: 0.6,
-              });
-            } else {
-              layer.setStyle({
-                color: "#aaa",
-                weight: 1,
-                fillColor: "#ddd",
-                fillOpacity: 0.2,
-              });
-            }
-          },
-        }).addTo(map);
-      });
-
-    // 언어 목록 표시
-    function showLanguageList(countryLang) {
-      const sidebar = document.getElementById("languageSidebar");
-      const title = document.getElementById("countryName");
-      const list = document.getElementById("languageList");
-
-      title.textContent = countryLang.name;
-      list.innerHTML = "";
-
-      countryLang.list.slice(0, 10).forEach(lang => {
-        const li = document.createElement("li");
-        li.textContent = `${lang[0]} - ${lang[1]}%`;
-        list.appendChild(li);
-      });
-
-      sidebar.style.display = "block";
-    }
+    restaurants.forEach(place => {
+      const marker = L.marker(place.coords).addTo(map);
+      marker.bindPopup(`
+        <strong>${place.name}</strong><br/>
+        ${place.desc}<br/>
+        <a href="${place.link}" target="_blank">지도에서 보기</a>
+      `);
+    });
   </script>
 </body>
 </html>
