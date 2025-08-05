@@ -1,10 +1,158 @@
-<html>
-  <head>
-    <title> Wittgen_ShootingSTAR</title>
-  </head>
-  <body>
-    <h1>Title of Wittgen_ShootingSTAR</h1>
-    <h2>Subtitle</h2>
-    <p>Paragraph. 'Whereof one cannot speak, thereof one must be silent.'</p>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>세계 언어 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+  />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    .language-popup {
+      font-size: 14px;
+    }
+
+    .sidebar {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 300px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="sidebar" id="languageSidebar">
+    <h3 id="countryName">Country</h3>
+    <ol id="languageList"></ol>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson@3"></script>
+
+  <script>
+    const map = L.map("map").setView([20, 0], 2);
+
+    // 배경 지도 타일
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "© OpenStreetMap",
+    }).addTo(map);
+
+    // 샘플 언어 데이터 (현실과 다를 수 있음)
+    const languageData = {
+      "KOR": {
+        name: "South Korea",
+        top: "Korean",
+        list: [
+          ["Korean", 98],
+          ["English", 1],
+          ["Chinese", 0.5],
+          ["Japanese", 0.2],
+          ["Vietnamese", 0.1],
+        ],
+      },
+      "USA": {
+        name: "United States",
+        top: "English",
+        list: [
+          ["English", 80],
+          ["Spanish", 13],
+          ["Chinese", 1.1],
+          ["Tagalog", 0.5],
+          ["Vietnamese", 0.5],
+          ["French", 0.4],
+          ["Arabic", 0.3],
+        ],
+      },
+      "CHN": {
+        name: "China",
+        top: "Mandarin",
+        list: [
+          ["Mandarin", 70],
+          ["Cantonese", 10],
+          ["Shanghainese", 5],
+          ["Hokkien", 2],
+          ["English", 1],
+        ],
+      },
+      "ESP": {
+        name: "Spain",
+        top: "Spanish",
+        list: [
+          ["Spanish", 74],
+          ["Catalan", 17],
+          ["Galician", 7],
+          ["Basque", 2],
+        ],
+      },
+      // 추가 국가 가능
+    };
+
+    // 국가 경계 GeoJSON 불러오기
+    fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json")
+      .then(res => res.json())
+      .then(data => {
+        L.geoJson(data, {
+          onEachFeature: (feature, layer) => {
+            const iso_a3 = feature.id || feature.properties.ISO_A3;
+            const countryLang = languageData[iso_a3];
+
+            if (countryLang) {
+              layer.bindTooltip(`${countryLang.top}`, { permanent: true, direction: "center", className: "language-label" });
+              layer.on("click", () => {
+                map.fitBounds(layer.getBounds());
+                showLanguageList(countryLang);
+              });
+              layer.setStyle({
+                color: "#333",
+                weight: 1,
+                fillColor: "#f4f4f4",
+                fillOpacity: 0.6,
+              });
+            } else {
+              layer.setStyle({
+                color: "#aaa",
+                weight: 1,
+                fillColor: "#ddd",
+                fillOpacity: 0.2,
+              });
+            }
+          },
+        }).addTo(map);
+      });
+
+    // 언어 목록 표시
+    function showLanguageList(countryLang) {
+      const sidebar = document.getElementById("languageSidebar");
+      const title = document.getElementById("countryName");
+      const list = document.getElementById("languageList");
+
+      title.textContent = countryLang.name;
+      list.innerHTML = "";
+
+      countryLang.list.slice(0, 10).forEach(lang => {
+        const li = document.createElement("li");
+        li.textContent = `${lang[0]} - ${lang[1]}%`;
+        list.appendChild(li);
+      });
+
+      sidebar.style.display = "block";
+    }
+  </script>
+</body>
 </html>
