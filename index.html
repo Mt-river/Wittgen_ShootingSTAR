@@ -1,73 +1,186 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>서울대 주변 맛집 지도</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-  />
+  <meta charset="UTF-8" />
+  <title>벽돌깨기 게임</title>
   <style>
-    #map {
-      height: 100vh;
-      width: 100%;
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #eee;
+      border: 2px solid #333;
+    }
+
+    body {
+      text-align: center;
+      font-family: sans-serif;
+      background: #fafafa;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <h2>🎮 벽돌깨기 게임</h2>
+  <canvas id="gameCanvas" width="480" height="320"></canvas>
 
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([37.4675, 126.9523], 16); // 서울대 중심
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map);
+    // 공
+    let x = canvas.width / 2;
+    let y = canvas.height - 30;
+    let dx = 2;
+    let dy = -2;
+    const ballRadius = 10;
 
-    const restaurants = [
-      {
-        name: "Sumibi (스미비 햄버그 스테이크)",
-        coords: [37.4706, 126.9518],
-        desc: "일본식 햄버그 라이스볼 전문",
-        link: "https://www.google.com/maps/place/Sumibi"
-      },
-      {
-        name: "Kissa Seoul (기싸 서울)",
-        coords: [37.4701, 126.9512],
-        desc: "연어, 부타동 덮밥 전문",
-        link: "https://www.google.com/maps/place/Kissa+Seoul"
-      },
-      {
-        name: "Publico Taco",
-        coords: [37.4686, 126.9524],
-        desc: "정통 멕시칸 타코와 가라비타 프라이",
-        link: "https://www.google.com/maps/place/Publico+Taco"
-      },
-      {
-        name: "Don Ppyeorak (돈뻬염 탄불갈비)",
-        coords: [37.4689, 126.9532],
-        desc: "숯불 양념 갈비 전문",
-        link: "https://www.google.com/maps/place/돈뻬염+탄불갈비"
-      },
-      {
-        name: "Samsan Hoegwan (삼산회관)",
-        coords: [37.4672, 126.9535],
-        desc: "숙성 김치와 돼지고기 한식",
-        link: "https://www.google.com/maps/place/삼산회관"
-      },
-    ];
+    // 패들
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
 
-    restaurants.forEach(place => {
-      const marker = L.marker(place.coords).addTo(map);
-      marker.bindPopup(`
-        <strong>${place.name}</strong><br/>
-        ${place.desc}<br/>
-        <a href="${place.link}" target="_blank">지도에서 보기</a>
-      `);
-    });
+    let rightPressed = false;
+    let leftPressed = false;
+
+    // 벽돌
+    const brickRowCount = 5;
+    const brickColumnCount = 7;
+    const brickWidth = 60;
+    const brickHeight = 20;
+    const brickPadding = 10;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 35;
+
+    const bricks = [];
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
+      }
+    }
+
+    let score = 0;
+
+    document.addEventListener("keydown", keyDownHandler);
+    document.addEventListener("keyup", keyUpHandler);
+
+    function keyDownHandler(e) {
+      if (e.key === "Right" || e.key === "ArrowRight") {
+        rightPressed = true;
+      } else if (e.key === "Left" || e.key === "ArrowLeft") {
+        leftPressed = true;
+      }
+    }
+
+    function keyUpHandler(e) {
+      if (e.key === "Right" || e.key === "ArrowRight") {
+        rightPressed = false;
+      } else if (e.key === "Left" || e.key === "ArrowLeft") {
+        leftPressed = false;
+      }
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status === 1) {
+            if (
+              x > b.x &&
+              x < b.x + brickWidth &&
+              y > b.y &&
+              y < b.y + brickHeight
+            ) {
+              dy = -dy;
+              b.status = 0;
+              score++;
+              if (score === brickRowCount * brickColumnCount) {
+                alert("🎉 축하합니다! 벽돌을 모두 깼습니다!");
+                document.location.reload();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(x, y, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#0095DD";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#333";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
+
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#DD3333";
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function drawScore() {
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText("Score: " + score, 8, 20);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      drawScore();
+      collisionDetection();
+
+      // 벽에 튕기기
+      if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+        dx = -dx;
+      }
+      if (y + dy < ballRadius) {
+        dy = -dy;
+      } else if (y + dy > canvas.height - ballRadius) {
+        if (x > paddleX && x < paddleX + paddleWidth) {
+          dy = -dy;
+        } else {
+          alert("💥 게임 오버!");
+          document.location.reload();
+        }
+      }
+
+      x += dx;
+      y += dy;
+
+      // 패들 이동
+      if (rightPressed && paddleX < canvas.width - paddleWidth) {
+        paddleX += 5;
+      } else if (leftPressed && paddleX > 0) {
+        paddleX -= 5;
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
   </script>
 </body>
 </html>
